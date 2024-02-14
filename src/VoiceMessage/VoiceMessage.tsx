@@ -15,35 +15,40 @@ const linkMP3 =
 
 const VoiceMessage = () => {
   const { currentInSec, status } = useSoundState({ src: linkMP3 });
-  const [relativePos, setRelativePos] = useState(0.33);
-  const [localCurrent, setLocalCurrent] = useState(24);
+  const [relativePos, setRelativePos] = useState(0);
+  const [localCurrent, setLocalCurrent] = useState(0);
   const [isDrag, setDrag] = useState(false);
 
   const setPosition = (relativePos: number) => {
+    console.log("!!! setPosition");
     const newLocalCurrent = Math.round(relativePos * duration);
     // console.log("!!! localCurrent", localCurrent);
-    console.log("!!! newLocalCurrent", newLocalCurrent);
+    // console.log("!!! newLocalCurrent", newLocalCurrent);
     if (localCurrent === newLocalCurrent) return;
     setLocalCurrent(newLocalCurrent);
-    pause();
     seek(newLocalCurrent);
     setDrag(false);
-    // setTimeout(() => {
-    //   console.log("!!! setDrag -> timer");
-    //   setDrag(false);
-    // }, 2000);
   };
 
   const toggleStatus = () => {
-    if (status === "stopped" || status === "paused") play(localCurrent);
+    if (status === "stopped" || status === "paused") play();
     else if (status === "playing") pause();
   };
 
+  /**
+   * !!! position 11    SoundTrack.tsx:63:16
+   * !!! ox 43          SoundTrack.tsx:64:16
+   * !!! setPosition    VoiceMessage.tsx:23:12
+   * !!! useEffect 16   2 VoiceMessage.tsx:40:12
+   * !!! position 58    SoundTrack.tsx:63:16
+   * !!! ox 43          SoundTrack.tsx:64:16
+   */
   useEffect(() => {
-    if (isDrag) return;
+    if (isDrag || Math.abs(localCurrent - currentInSec) > 3) return; // || Math.abs(localCurrent - currentInSec) > 3
+    console.log("!!! useEffect", currentInSec);
     setLocalCurrent(currentInSec);
     setRelativePos(currentInSec / duration);
-  }, [currentInSec]);
+  }, [currentInSec, localCurrent, isDrag]);
 
   return (
     <div className="voice-message">

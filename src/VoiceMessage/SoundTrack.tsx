@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
@@ -23,7 +23,7 @@ export interface SoundTrackProps {
   setPosition: (relativePos: number) => void;
   setDrag: (state: boolean) => void;
 }
-export default function SoundTrack({
+export default memo(function SoundTrack({
   waveform,
   relativePos,
   setPosition,
@@ -40,33 +40,39 @@ export default function SoundTrack({
       waveform.length > maxSamples ? resample(waveform, maxSamples) : waveform;
     const width = 3 * samples.length + 2 * padding;
 
-    for (var n = "", i = 0, r = 0; r < samples.length; r++) {
+    let n = "";
+    for (let i = 0, r = 0; r < samples.length; r++) {
       i = Math.floor((samples[r] * maxHeight) / maxValue);
       if (i === 0) i = 0.5;
       n += "M" + (3 * r + padding) + "," + (maxHeight - i) + "v" + 2 * i + "Z";
     }
     return { path: n, width };
-  }, [waveform.length]);
+  }, [waveform]);
 
   let position = Math.ceil(relativePos * (width - 2 * padding));
   if (isNaN(position)) position = 0;
 
-  const [{ x, y }, api] = useSpring(() => ({ x: 0, y: 0 }));
+  const [{ x }, api] = useSpring(() => ({ x: 0 }));
+  api.set({ x: position });
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
-  const [offsetX, setOffsetX] = useState(0);
+  // if (!hoverTrCtrl) api.set({ x: position });
 
   const bind = useGesture(
     {
       onDrag: ({ down, offset: [ox] }) => {
-        api.start({ x: ox, immediate: down });
+        console.log("!!! position", position);
+        console.log("!!! ox", ox);
+        api.start({ x: ox + position, immediate: down });
       },
       onDragEnd: ({ offset: [ox] }) => {
         const relativePosition = (ox + position) / (width - 2 * padding);
         setPosition(relativePosition);
-        setOffsetX(ox);
+        // api.set({ x: 0 });
+        // api.stop(true);
       },
       onHover: ({ hovering }) => {
         setDrag(hovering ?? false);
+        // setDrag(true);
         setHoverTrCtrl(() => hovering ?? false);
       },
     },
@@ -81,9 +87,6 @@ export default function SoundTrack({
     }
   );
 
-  console.log("!!! x ->", x.goal);
-  console.log("!!! offsetX ->", offsetX);
-
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -92,11 +95,11 @@ export default function SoundTrack({
       fill="none"
     >
       <path d={`${path}`} stroke="#4eac6d"></path>
-      <animated.g {...bind()} style={{ x, y, touchAction: "none" }}>
+      <animated.g {...bind()} style={{ x, touchAction: "none" }}>
         <rect
           width="20"
           height={maxHeight}
-          x={position}
+          // x={position}
           y={maxHeight / 2}
           stroke="none"
           fill="#fff"
@@ -105,9 +108,9 @@ export default function SoundTrack({
         <line
           id="trCtrl"
           y2={(maxHeight * 3) / 2}
-          x2={position + padding}
+          x2={padding}
           y1={maxHeight / 2}
-          x1={position + padding}
+          x1={padding}
           stroke="#000"
           strokeWidth={hoverTrCtrl ? hoverBorder : 1}
           fill="none"
@@ -115,4 +118,4 @@ export default function SoundTrack({
       </animated.g>
     </svg>
   );
-}
+});

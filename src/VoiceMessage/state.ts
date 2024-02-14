@@ -15,7 +15,7 @@ export interface UseSoundProps {
 }
 export const useSoundState = ({ src }: UseSoundProps): SoundState => {
   const [currentInSec, setCurrentInSec] =
-    useState<SoundState["currentInSec"]>(24);
+    useState<SoundState["currentInSec"]>(0);
   const [status, setStatus] = useState<SoundState["status"]>("stopped");
 
   useEffect(() => {
@@ -40,13 +40,12 @@ export const useSoundState = ({ src }: UseSoundProps): SoundState => {
       setStatus("stopped");
       setCurrentInSec(0);
     });
-  }, []);
+  }, [src]);
 
   return { currentInSec, status };
 };
 
-export function play(seconds?: number) {
-  if (seconds) sound?.seek(seconds);
+export function play() {
   sound?.play();
 }
 
@@ -55,5 +54,16 @@ export function pause() {
 }
 
 export function seek(seconds: number) {
+  sound?.pause();
   sound?.seek(seconds);
+  sound?.play();
 }
+
+// export function seekAsync(seconds: number): Promise<void> {
+//   return new Promise((resolve) => {
+//     sound?.pause();
+//     sound?.seek(seconds);
+//     sound?.play();
+//     sound?.once("play", () => resolve(undefined));
+//   });
+// }
