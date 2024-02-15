@@ -8,7 +8,7 @@ export type SoundState = {
 };
 
 let sound: Howl | null = null;
-let updTimer: number | undefined = undefined;
+let updTimer: ReturnType<typeof setInterval> | undefined = undefined;
 
 export interface UseSoundProps {
   src: string;
@@ -23,7 +23,8 @@ export const useSoundState = ({ src }: UseSoundProps): SoundState => {
     sound.on("play", () => {
       setStatus("playing");
       updTimer = setInterval(() => {
-        setCurrentInSec(Math.round(sound?.seek() ?? 0));
+        const currentInSec = Math.round(sound?.seek() ?? 0);
+        setCurrentInSec(currentInSec);
       }, 1000);
     });
     sound.on("pause", () => {
@@ -58,12 +59,3 @@ export function seek(seconds: number) {
   sound?.seek(seconds);
   sound?.play();
 }
-
-// export function seekAsync(seconds: number): Promise<void> {
-//   return new Promise((resolve) => {
-//     sound?.pause();
-//     sound?.seek(seconds);
-//     sound?.play();
-//     sound?.once("play", () => resolve(undefined));
-//   });
-// }

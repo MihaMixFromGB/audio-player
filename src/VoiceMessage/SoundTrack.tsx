@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
@@ -21,13 +21,11 @@ export interface SoundTrackProps {
   waveform: number[];
   relativePos: number;
   setPosition: (relativePos: number) => void;
-  setDrag: (state: boolean) => void;
 }
-export default memo(function SoundTrack({
+export default function SoundTrack({
   waveform,
   relativePos,
   setPosition,
-  setDrag,
 }: SoundTrackProps) {
   const maxValue = 100;
   const maxHeight = 100;
@@ -48,44 +46,33 @@ export default memo(function SoundTrack({
     }
     return { path: n, width };
   }, [waveform]);
+  const maxWidth = width - 2 * padding;
 
-  let position = Math.ceil(relativePos * (width - 2 * padding));
+  let position = Math.ceil(relativePos * maxWidth);
   if (isNaN(position)) position = 0;
 
   const [{ x }, api] = useSpring(() => ({ x: 0 }));
   api.set({ x: position });
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
-  // if (!hoverTrCtrl) api.set({ x: position });
 
-  const bind = useGesture(
-    {
-      onDrag: ({ down, offset: [ox] }) => {
-        console.log("!!! position", position);
-        console.log("!!! ox", ox);
-        api.start({ x: ox + position, immediate: down });
-      },
-      onDragEnd: ({ offset: [ox] }) => {
-        const relativePosition = (ox + position) / (width - 2 * padding);
-        setPosition(relativePosition);
-        // api.set({ x: 0 });
-        // api.stop(true);
-      },
-      onHover: ({ hovering }) => {
-        setDrag(hovering ?? false);
-        // setDrag(true);
-        setHoverTrCtrl(() => hovering ?? false);
-      },
+  function getX(value: number) {
+    if (value < 0) return 0;
+    if (value > maxWidth) return maxWidth;
+    return value;
+  }
+
+  const bind = useGesture({
+    onDrag: ({ down, movement: [mx] }) => {
+      api.start({ x: getX(position + mx), immediate: down });
     },
-    {
-      drag: {
-        axis: "x",
-        bounds: {
-          left: 0 - position,
-          right: width - 2 * padding - position,
-        },
-      },
-    }
-  );
+    onDragEnd: ({ movement: [mx] }) => {
+      const relativePosition = getX(mx + position) / (width - 2 * padding);
+      setPosition(relativePosition);
+    },
+    onHover: ({ hovering }) => {
+      setHoverTrCtrl(() => hovering ?? false);
+    },
+  });
 
   return (
     <svg
@@ -99,7 +86,6 @@ export default memo(function SoundTrack({
         <rect
           width="20"
           height={maxHeight}
-          // x={position}
           y={maxHeight / 2}
           stroke="none"
           fill="#fff"
@@ -118,4 +104,4 @@ export default memo(function SoundTrack({
       </animated.g>
     </svg>
   );
-});
+}
