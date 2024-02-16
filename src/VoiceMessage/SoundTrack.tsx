@@ -29,9 +29,9 @@ export default function SoundTrack({ duration, waveform }: SoundTrackProps) {
   const maxHeight = 100;
   const maxSamples = 100;
   const padding = 10;
-  const hoverBorder = 3;
+  const hoverBorder = 6;
 
-  const { path, width, maxTrack } = useMemo(() => {
+  const { path, width, maxTrack, oxSec } = useMemo(() => {
     const samples =
       waveform.length > maxSamples ? resample(waveform, maxSamples) : waveform;
     const width = 3 * samples.length + 2 * padding;
@@ -42,58 +42,69 @@ export default function SoundTrack({ duration, waveform }: SoundTrackProps) {
       if (i === 0) i = 0.5;
       n += "M" + (3 * r + padding) + "," + (maxHeight - i) + "v" + 2 * i + "Z";
     }
-    return { path: n, width, maxTrack: width - 2 * padding };
+
+    const maxTrack = width - 2 * padding;
+    return { path: n, width, maxTrack, oxSec: maxTrack / duration };
   }, [waveform]);
 
   //   const { status } = useSoundState();
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
   const [dragging, setDragging] = useState(false);
   const timer = useRef<number | undefined>();
+  // const [position, setPosition] = useState(0);
+  const position = useRef(0);
 
-  const [{ x }, api] = useSpring(() => ({
-    x: 0,
-  }));
+  const [{ x }, api] = useSpring(() => ({ x: 0 }));
+
+  function getX(value: number) {
+    if (value < 0) return 0;
+    if (value > maxTrack) return maxTrack;
+    return value;
+  }
 
   useEffect(() => {
-    if (dragging) return;
-    // let step = 0;
+    if (dragging || position.current > maxTrack) {
+      clearInterval(timer.current);
+      timer.current = undefined;
+      return;
+    }
     console.log("!!! useEffect");
-    const timer = setInterval(() => {
-      console.log("!!! x.goal", x.goal);
-      const ox = maxTrack / duration;
-      api.start({ x: x.goal + ox });
-      //   step++;
+    timer.current = setInterval(() => {
+      console.log("!!! timer");
+      position.current = getX(position.current + oxSec);
+      api.start({
+        x: position.current,
+        config: { duration: 1000 },
+      });
+      if (position.current === maxTrack) clearInterval(timer.current);
     }, 1000);
 
     return () => {
       console.log("!!! exit useEffect");
-      clearInterval(timer);
+      clearInterval(timer.current);
+      timer.current = undefined;
     };
-  }, [api, dragging, duration, maxTrack, x.goal]);
+  }, [api, dragging, duration, maxTrack]);
 
-  //   function getX(value: number) {
-  //     if (value < 0) return 0;
-  //     if (value > maxWidth) return maxWidth;
-  //     return value;
-  //   }
-
-  const bind = useGesture(
-    {
-      onDrag: ({ down, dragging, offset: [ox] }) => {
-        setDragging(() => dragging ?? false);
-        api.start({ x: ox, immediate: down });
-      },
-      //   onDragEnd: () => {},
-      onHover: ({ hovering }) => {
-        setHoverTrCtrl(() => hovering ?? false);
-      },
+  const bind = useGesture({
+    onDrag: ({ down, dragging, movement: [ox] }) => {
+      setDragging(() => dragging ?? false);
+      console.log("!!! ox", ox);
+      api.start({
+        x: getX(position.current + ox),
+        immediate: down,
+        reset: true, // <-- reset ox after every re-render of the component
+        // TODO: return the drag -> bounds
+      });
     },
-    {
-      drag: {
-        bounds: { left: 0, right: width - 2 * padding },
-      },
-    }
-  );
+    onDragEnd: ({ movement: [ox] }) => {
+      // setPosition((p) => getX(p + ox));
+      position.current += ox;
+    },
+    onHover: ({ hovering }) => {
+      setHoverTrCtrl(() => hovering ?? false);
+    },
+  });
 
   return (
     <svg
@@ -119,7 +130,7 @@ export default function SoundTrack({ duration, waveform }: SoundTrackProps) {
           y1={maxHeight / 2}
           x1={padding}
           stroke="#000"
-          strokeWidth={hoverTrCtrl ? hoverBorder : 1}
+          strokeWidth={hoverTrCtrl ? hoverBorder : 3}
           fill="none"
         />
       </animated.g>
