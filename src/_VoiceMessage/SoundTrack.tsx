@@ -1,8 +1,6 @@
-import { useMemo, useState, useEffect, useRef } from "react";
-import { useSpring, animated, config } from "@react-spring/web";
+import { useMemo, useState } from "react";
+import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
-
-import { useSoundState } from "./state";
 
 function average(values: number[]) {
   const sum = values.reduce((a, b) => a + b, 0);
@@ -19,19 +17,23 @@ function resample(waveform: number[], maxLength: number) {
 
   return result;
 }
-
 export interface SoundTrackProps {
-  duration: number;
   waveform: number[];
+  relativePos: number;
+  setPosition: (relativePos: number) => void;
 }
-export default function SoundTrack({ duration, waveform }: SoundTrackProps) {
+export default function SoundTrack({
+  waveform,
+  relativePos,
+  setPosition,
+}: SoundTrackProps) {
   const maxValue = 100;
   const maxHeight = 100;
   const maxSamples = 100;
   const padding = 10;
   const hoverBorder = 3;
 
-  const { path, width, maxTrack } = useMemo(() => {
+  const { path, width } = useMemo(() => {
     const samples =
       waveform.length > maxSamples ? resample(waveform, maxSamples) : waveform;
     const width = 3 * samples.length + 2 * padding;
@@ -42,58 +44,35 @@ export default function SoundTrack({ duration, waveform }: SoundTrackProps) {
       if (i === 0) i = 0.5;
       n += "M" + (3 * r + padding) + "," + (maxHeight - i) + "v" + 2 * i + "Z";
     }
-    return { path: n, width, maxTrack: width - 2 * padding };
+    return { path: n, width };
   }, [waveform]);
+  const maxWidth = width - 2 * padding;
 
-  //   const { status } = useSoundState();
+  let position = Math.ceil(relativePos * maxWidth);
+  if (isNaN(position)) position = 0;
+
+  const [{ x }, api] = useSpring(() => ({ x: 0 }));
+  api.set({ x: position });
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const timer = useRef<number | undefined>();
 
-  const [{ x }, api] = useSpring(() => ({
-    x: 0,
-  }));
+  function getX(value: number) {
+    if (value < 0) return 0;
+    if (value > maxWidth) return maxWidth;
+    return value;
+  }
 
-  useEffect(() => {
-    if (dragging) return;
-    // let step = 0;
-    console.log("!!! useEffect");
-    const timer = setInterval(() => {
-      console.log("!!! x.goal", x.goal);
-      const ox = maxTrack / duration;
-      api.start({ x: x.goal + ox });
-      //   step++;
-    }, 1000);
-
-    return () => {
-      console.log("!!! exit useEffect");
-      clearInterval(timer);
-    };
-  }, [api, dragging, duration, maxTrack, x.goal]);
-
-  //   function getX(value: number) {
-  //     if (value < 0) return 0;
-  //     if (value > maxWidth) return maxWidth;
-  //     return value;
-  //   }
-
-  const bind = useGesture(
-    {
-      onDrag: ({ down, dragging, offset: [ox] }) => {
-        setDragging(() => dragging ?? false);
-        api.start({ x: ox, immediate: down });
-      },
-      //   onDragEnd: () => {},
-      onHover: ({ hovering }) => {
-        setHoverTrCtrl(() => hovering ?? false);
-      },
+  const bind = useGesture({
+    onDrag: ({ down, movement: [mx] }) => {
+      api.start({ x: getX(position + mx), immediate: down });
     },
-    {
-      drag: {
-        bounds: { left: 0, right: width - 2 * padding },
-      },
-    }
-  );
+    onDragEnd: ({ movement: [mx] }) => {
+      const relativePosition = getX(mx + position) / (width - 2 * padding);
+      setPosition(relativePosition);
+    },
+    onHover: ({ hovering }) => {
+      setHoverTrCtrl(() => hovering ?? false);
+    },
+  });
 
   return (
     <svg
