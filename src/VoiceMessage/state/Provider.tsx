@@ -54,7 +54,6 @@ const VoiceMessageProvider = ({
     sound.on("end", () => {
       clearInterval(updTimer.current);
       setStatus("stopped");
-      setCurrentInSec(0);
     });
     return () => {
       sound.off();
