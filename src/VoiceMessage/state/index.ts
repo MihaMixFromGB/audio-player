@@ -1,2 +1,2 @@
 export { default as VoiceMessageProvider } from "./Provider";
-export { useSoundState } from "./useSoundState";
+export { useAudioPlayerState } from "./useAudioPlayerState";

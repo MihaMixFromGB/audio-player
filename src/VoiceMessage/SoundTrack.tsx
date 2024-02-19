@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
-import { useSoundState } from "./state";
+import { useAudioPlayerState } from "./state";
 
 interface SoundTrackProps {
   duration: number;
@@ -33,7 +33,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
 
   const position = useRef(0);
   // const timer = useRef<number | undefined>();
-  const { currentInSec, status, play, pause, seek } = useSoundState();
+  const { currentInSec, status, play, pause, seek } = useAudioPlayerState();
   position.current = currentInSec * oxSec;
 
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
@@ -68,10 +68,12 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
 
   // useEffect(() => {
   //   if (dragging || position.current > maxTrack) {
+  //     if (status === "playing") pause();
   //     clearInterval(timer.current);
   //     timer.current = undefined;
   //     return;
   //   }
+  //   if (status !== "playing") return;
   //   console.log("!!! useEffect");
   //   timer.current = setInterval(() => {
   //     console.log("!!! timer");
@@ -89,7 +91,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
   //     clearInterval(timer.current);
   //     timer.current = undefined;
   //   };
-  // }, [api, dragging, duration, maxTrack]);
+  // }, [api, dragging, duration, maxTrack, status]);
 
   const bind = useGesture({
     onDrag: ({ down, dragging, movement: [ox] }) => {

@@ -8,38 +8,45 @@ import {
 } from "react";
 import { Howl } from "howler";
 
-export type SoundStatus = "playing" | "paused" | "stopped";
-export type SoundState = {
+export type SoundTrack = {
+  id: number;
+  src: string;
+  sound?: Howl;
+};
+export type AudioPlayerStatus = "playing" | "paused" | "stopped";
+export type AudioPlayerState = {
   currentInSec: number;
-  status: SoundStatus;
+  status: AudioPlayerStatus;
   play: () => void;
   pause: () => void;
   seek: (seconds: number) => void;
 };
 
-export const SoundContext = createContext<SoundState>({} as SoundState);
+export const AudioPlayerContext = createContext<AudioPlayerState>(
+  {} as AudioPlayerState
+);
 
-interface VoiceMessageProviderProps {
-  soundSrc: string;
+interface AudioPlayerProviderProps {
+  playList: SoundTrack[];
   children: React.ReactNode;
 }
-const VoiceMessageProvider = ({
-  soundSrc,
+const AudioPlayerProvider = ({
+  playList,
   children,
-}: VoiceMessageProviderProps) => {
-  const [sound] = useState<Howl>(() => new Howl({ src: soundSrc }));
+}: AudioPlayerProviderProps) => {
+  const [track, setTrack] = useState<SoundTrack | null>(null);
+  const [currentInSec, setCurrentInSec] = useState<number>(0);
   const updTimer = useRef<ReturnType<typeof setInterval> | undefined>();
-
-  const [currentInSec, setCurrentInSec] =
-    useState<SoundState["currentInSec"]>(0);
-  const [status, setStatus] = useState<SoundState["status"]>("stopped");
+  const [status, setStatus] = useState<AudioPlayerState["status"]>("stopped");
 
   useEffect(() => {
+    if (!track?.sound) return;
+    const { sound } = track;
+
     sound.on("play", () => {
       setStatus("playing");
       updTimer.current = setInterval(() => {
-        const currentInSec = Math.round(sound?.seek() ?? 0);
-        setCurrentInSec(currentInSec);
+        setCurrentInSec(sound.seek() ?? 0);
       }, 1000);
     });
     sound.on("pause", () => {
@@ -55,28 +62,50 @@ const VoiceMessageProvider = ({
       clearInterval(updTimer.current);
       setStatus("stopped");
     });
+
+    sound.play();
+
     return () => {
       sound.off();
     };
-  }, [sound]);
+  }, [track]);
 
-  const play = useCallback(() => sound.play(), [sound]);
-  const pause = useCallback(() => sound.pause(), [sound]);
+  const play = useCallback(
+    (id?: SoundTrack["id"]) => {
+      if (!id && !track) return;
+      if ((!id && track) || track?.id === id) {
+        track?.sound?.play();
+      }
+
+      const idx = playList.findIndex((t) => t.id === id);
+      if (idx === -1) return;
+      if (!playList[idx].sound) {
+        playList[idx].sound = new Howl({ src: playList[idx].src });
+      }
+      setTrack(playList[idx]);
+    },
+    [track]
+  );
+  const pause = useCallback(() => {
+    track?.sound?.pause();
+  }, [track]);
   const seek = useCallback(
-    (seconds: Parameters<SoundState["seek"]>[0]) => sound.seek(seconds),
-    [sound]
+    (seconds: Parameters<AudioPlayerState["seek"]>[0]) => {
+      track?.sound?.seek(seconds);
+    },
+    [track]
   );
 
   const contextValue = useMemo(
-    () => ({ currentInSec, status, play, pause, seek }),
-    [currentInSec, status, play, pause, seek]
+    () => ({ trackId: track?.id, currentInSec, status, play, pause, seek }),
+    [track?.id, currentInSec, status, play, pause, seek]
   );
 
   return (
-    <SoundContext.Provider value={contextValue}>
+    <AudioPlayerContext.Provider value={contextValue}>
       {children}
-    </SoundContext.Provider>
+    </AudioPlayerContext.Provider>
   );
 };
 
-export default VoiceMessageProvider;
+export default AudioPlayerProvider;
