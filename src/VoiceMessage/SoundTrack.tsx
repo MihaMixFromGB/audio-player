@@ -29,7 +29,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
 
     const maxTrack = width - 2 * padding;
     return { path: n, width, maxTrack, oxSec: maxTrack / duration };
-  }, [waveform]);
+  }, [waveform, duration]);
 
   const position = useRef(0);
   // const timer = useRef<number | undefined>();
@@ -64,7 +64,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
       filterX: position.current + padding,
       config: { duration: 1000 },
     });
-  }, [currentInSec, dragging, skipStep]);
+  }, [currentInSec, status, dragging, skipStep, pause, api, oxSec]);
 
   // useEffect(() => {
   //   if (dragging || position.current > maxTrack) {
