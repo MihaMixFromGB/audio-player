@@ -2,13 +2,15 @@ import { useMemo, useState, useEffect, useRef } from "react";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
-import { useAudioPlayerState } from "./state";
+import { useTrack, useAudioPlayerControl } from "./state";
+import { SoundTrack as TSoundTrack } from "./state/Provider";
 
-interface SoundTrackProps {
+export interface SoundTrackProps {
+  idx: TSoundTrack["idx"];
   duration: number;
   waveform: number[];
 }
-const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
+const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
   const maxValue = 100;
   const maxHeight = 100;
   const maxSamples = 100;
@@ -33,7 +35,8 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
 
   const position = useRef(0);
   // const timer = useRef<number | undefined>();
-  const { currentInSec, status, play, pause, seek } = useAudioPlayerState();
+  const { currentInSec, status } = useTrack(idx);
+  const { play, pause } = useAudioPlayerControl();
   position.current = currentInSec * oxSec;
 
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
@@ -49,8 +52,9 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
   }
 
   useEffect(() => {
+    // console.log(`!!! useEffect -> idx: ${idx}`);
     if (dragging) {
-      if (status === "playing") pause();
+      pause();
       return;
     }
     if (skipStep) {
@@ -64,7 +68,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
       filterX: position.current + padding,
       config: { duration: 1000 },
     });
-  }, [currentInSec, status, dragging, skipStep, pause, api, oxSec]);
+  }, [idx, currentInSec, status, dragging, skipStep, pause, api, oxSec]);
 
   // useEffect(() => {
   //   if (dragging || position.current > maxTrack) {
@@ -108,8 +112,8 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
     onDragEnd: ({ movement: [ox] }) => {
       position.current += ox;
       setSkipStep(true);
-      seek(Math.round(position.current / oxSec));
-      play();
+      // seek(Math.round(position.current / oxSec));
+      play(idx, Math.round(position.current / oxSec));
     },
     onHover: ({ hovering }) => {
       setHoverTrCtrl(() => hovering ?? false);
@@ -125,7 +129,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
       fill="none"
     >
       <defs>
-        <filter id="glow">
+        <filter id={`glow${idx}`}>
           <AnimatedFeFlood
             floodColor="#c0c0c0"
             floodOpacity="1"
@@ -141,7 +145,7 @@ const SoundTrack = ({ duration, waveform }: SoundTrackProps) => {
         </filter>
       </defs>
       <path
-        filter="url(#glow)"
+        filter={`url(#glow${idx})`}
         fillRule="evenodd"
         clipRule="evenodd"
         d={`${path}`}

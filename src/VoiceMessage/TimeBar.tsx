@@ -1,10 +1,12 @@
-import { useAudioPlayerState } from "./state";
+import { useTrack } from "./state";
+import { SoundTrack } from "./state/Provider";
 
 interface TimeBarProps {
+  idx: SoundTrack["idx"];
   duration: number;
 }
-const TimeBar = ({ duration }: TimeBarProps) => {
-  const { currentInSec } = useAudioPlayerState();
+const TimeBar = ({ idx, duration }: TimeBarProps) => {
+  const { currentInSec } = useTrack(idx);
 
   return (
     <div className="voice-message__time">

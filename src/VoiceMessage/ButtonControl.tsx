@@ -1,9 +1,15 @@
-import { useSoundState } from "./state";
+import { useTrack, useAudioPlayerControl } from "./state";
+import { SoundTrack } from "./state/Provider";
 
-const ButtonControl = () => {
-  const { status, play, pause } = useSoundState();
+interface ButtonControlProps {
+  idx: SoundTrack["idx"];
+}
+const ButtonControl = ({ idx }: ButtonControlProps) => {
+  const { status } = useTrack(idx);
+  const { play, pause } = useAudioPlayerControl();
   function toggle() {
-    if (status === "stopped" || status === "paused") play();
+    console.log("!!! status", status);
+    if (status === "stopped" || status === "paused") play(idx);
     else if (status === "playing") pause();
   }
 

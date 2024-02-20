@@ -9,16 +9,18 @@ import {
 import { Howl } from "howler";
 
 export type SoundTrack = {
-  id: number;
+  idx: number;
   src: string;
   sound?: Howl;
+  status: AudioPlayerStatus;
+  currentInSec: number;
 };
 export type AudioPlayerStatus = "playing" | "paused" | "stopped";
 export type AudioPlayerState = {
-  currentInSec: number;
-  status: AudioPlayerStatus;
-  play: () => void;
-  pause: () => void;
+  track: SoundTrack | null;
+  playList: SoundTrack[];
+  play: (idx?: number, seconds?: number) => void;
+  pause: (idx?: number) => void;
   seek: (seconds: number) => void;
 };
 
@@ -27,40 +29,51 @@ export const AudioPlayerContext = createContext<AudioPlayerState>(
 );
 
 interface AudioPlayerProviderProps {
-  playList: SoundTrack[];
+  playListSrc: Array<SoundTrack["src"]>;
   children: React.ReactNode;
 }
 const AudioPlayerProvider = ({
-  playList,
+  playListSrc,
   children,
 }: AudioPlayerProviderProps) => {
+  const [playList] = useState<SoundTrack[]>(() =>
+    playListSrc.map((src, idx) => ({
+      idx,
+      src,
+      status: "stopped",
+      currentInSec: 0,
+    }))
+  );
   const [track, setTrack] = useState<SoundTrack | null>(null);
-  const [currentInSec, setCurrentInSec] = useState<number>(0);
   const updTimer = useRef<ReturnType<typeof setInterval> | undefined>();
-  const [status, setStatus] = useState<AudioPlayerState["status"]>("stopped");
 
   useEffect(() => {
     if (!track?.sound) return;
     const { sound } = track;
 
     sound.on("play", () => {
-      setStatus("playing");
       updTimer.current = setInterval(() => {
-        setCurrentInSec(sound.seek() ?? 0);
+        // console.log("!!! timer", Math.round(sound.seek() ?? 0));
+        setTrack((t) => ({
+          ...t!,
+          status: "playing",
+          currentInSec: Math.round(sound.seek() ?? 0),
+        }));
       }, 1000);
     });
     sound.on("pause", () => {
       clearInterval(updTimer.current);
-      setStatus("paused");
-    });
-    sound.on("stop", () => {
-      clearInterval(updTimer.current);
-      setStatus("stopped");
-      setCurrentInSec(0);
+      setTrack((t) => ({
+        ...t!,
+        status: "paused",
+      }));
     });
     sound.on("end", () => {
       clearInterval(updTimer.current);
-      setStatus("stopped");
+      setTrack((t) => ({
+        ...t!,
+        status: "stopped",
+      }));
     });
 
     sound.play();
@@ -68,37 +81,68 @@ const AudioPlayerProvider = ({
     return () => {
       sound.off();
     };
-  }, [track]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track?.idx]);
+
+  function setNewTrack(idx: SoundTrack["idx"]) {
+    console.log("!!! setNewTrack -> idx", idx);
+    if (track) {
+      console.log("!!! setNewTrack -> save track", track);
+      playList[track.idx] = { ...track };
+    }
+
+    setTrack(playList[idx]);
+  }
 
   const play = useCallback(
-    (id?: SoundTrack["id"]) => {
-      if (!id && !track) return;
-      if ((!id && track) || track?.id === id) {
+    (
+      idx?: SoundTrack["idx"],
+      seconds?: Parameters<AudioPlayerState["seek"]>[0]
+    ) => {
+      if (
+        idx === undefined ||
+        (track?.idx === idx && track?.status !== "playing")
+      ) {
+        if (seconds) track?.sound?.seek(seconds);
         track?.sound?.play();
+        return;
       }
 
-      const idx = playList.findIndex((t) => t.id === id);
-      if (idx === -1) return;
+      if (!playList[idx]) return;
       if (!playList[idx].sound) {
         playList[idx].sound = new Howl({ src: playList[idx].src });
       }
-      setTrack(playList[idx]);
+      if (seconds) playList[idx].sound?.seek(seconds);
+
+      setNewTrack(idx);
     },
-    [track]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [track?.idx]
   );
-  const pause = useCallback(() => {
-    track?.sound?.pause();
-  }, [track]);
+  const pause = useCallback(
+    () => {
+      track?.sound?.pause();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [track?.idx]
+  );
   const seek = useCallback(
     (seconds: Parameters<AudioPlayerState["seek"]>[0]) => {
       track?.sound?.seek(seconds);
     },
-    [track]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [track?.idx]
   );
 
   const contextValue = useMemo(
-    () => ({ trackId: track?.id, currentInSec, status, play, pause, seek }),
-    [track?.id, currentInSec, status, play, pause, seek]
+    () => ({
+      track,
+      playList,
+      play,
+      pause,
+      seek,
+    }),
+    [track, playList, play, pause, seek]
   );
 
   return (

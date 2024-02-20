@@ -1,24 +1,19 @@
 import SoundTrack from "./SoundTrack";
-import { VoiceMessageProvider } from "./state";
 import ButtonControl from "./ButtonControl";
 import TimeBar from "./TimeBar";
+import { SoundTrackProps } from "./SoundTrack";
 
-interface VoiceMessageProps {
-  src: string;
-  duration: number;
-  waveform: number[];
-}
-const VoiceMessage = ({ src, duration, waveform }: VoiceMessageProps) => {
+interface VoiceMessageProps extends SoundTrackProps {}
+
+const VoiceMessage = ({ idx, duration, waveform }: VoiceMessageProps) => {
   return (
-    <VoiceMessageProvider soundSrc={src}>
-      <div className="voice-message">
-        <ButtonControl />
-        <div className="voice-message__soundtrack">
-          <SoundTrack duration={duration} waveform={waveform} />
-          <TimeBar duration={duration} />
-        </div>
+    <div className="voice-message">
+      <ButtonControl idx={idx} />
+      <div className="voice-message__soundtrack">
+        <SoundTrack idx={idx} duration={duration} waveform={waveform} />
+        <TimeBar idx={idx} duration={duration} />
       </div>
-    </VoiceMessageProvider>
+    </div>
   );
 };
 
