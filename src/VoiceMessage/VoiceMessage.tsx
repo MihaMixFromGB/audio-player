@@ -1,17 +1,19 @@
 import SoundTrack from "./SoundTrack";
 import ButtonControl from "./ButtonControl";
 import TimeBar from "./TimeBar";
-import { SoundTrackProps } from "./SoundTrack";
+import { SoundTrack as TSoundTrack } from "../store/model";
 
-interface VoiceMessageProps extends SoundTrackProps {}
+interface VoiceMessageProps {
+  id: TSoundTrack["id"];
+}
 
-const VoiceMessage = ({ idx, duration, waveform }: VoiceMessageProps) => {
+const VoiceMessage = ({ id }: VoiceMessageProps) => {
   return (
     <div className="voice-message">
-      <ButtonControl idx={idx} />
+      <ButtonControl trackId={id} />
       <div className="voice-message__soundtrack">
-        <SoundTrack idx={idx} duration={duration} waveform={waveform} />
-        <TimeBar idx={idx} duration={duration} />
+        <SoundTrack trackId={id} />
+        <TimeBar trackId={id} />
       </div>
     </div>
   );

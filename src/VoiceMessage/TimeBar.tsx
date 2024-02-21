@@ -1,12 +1,11 @@
-import { useTrack } from "./state";
-import { SoundTrack } from "./state/Provider";
+import { useTrack } from "../hooks";
+import { SoundTrack } from "../store/model";
 
 interface TimeBarProps {
-  idx: SoundTrack["idx"];
-  duration: number;
+  trackId: SoundTrack["id"];
 }
-const TimeBar = ({ idx, duration }: TimeBarProps) => {
-  const { currentInSec } = useTrack(idx);
+const TimeBar = ({ trackId }: TimeBarProps) => {
+  const { currentInSec, duration } = useTrack(trackId);
 
   return (
     <div className="voice-message__time">

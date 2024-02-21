@@ -1,21 +1,23 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { isFulfilled } from "@reduxjs/toolkit";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
-import { useTrack, useAudioPlayerControl } from "./state";
-import { SoundTrack as TSoundTrack } from "./state/Provider";
+import { useAppDispatch, useTrack } from "../hooks";
+import { play, seek, pause } from "../store/actions";
+import { SoundTrack as TSoundTrack } from "../store/model";
 
 export interface SoundTrackProps {
-  idx: TSoundTrack["idx"];
-  duration: number;
-  waveform: number[];
+  trackId: TSoundTrack["id"];
 }
-const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
+const SoundTrack = ({ trackId }: SoundTrackProps) => {
   const maxValue = 100;
   const maxHeight = 100;
   const maxSamples = 100;
   const padding = 10;
   const hoverBorder = 6;
+
+  const { id, currentInSec, status, duration, waveform } = useTrack(trackId);
 
   const { path, width, maxTrack, oxSec } = useMemo(() => {
     const samples =
@@ -33,10 +35,11 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
     return { path: n, width, maxTrack, oxSec: maxTrack / duration };
   }, [waveform, duration]);
 
+  const dispatch = useAppDispatch();
+
   const position = useRef(0);
   // const timer = useRef<number | undefined>();
-  const { currentInSec, status } = useTrack(idx);
-  const { play, pause } = useAudioPlayerControl();
+
   position.current = currentInSec * oxSec;
 
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
@@ -54,7 +57,7 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
   useEffect(() => {
     // console.log(`!!! useEffect -> idx: ${idx}`);
     if (dragging) {
-      pause();
+      dispatch(pause());
       return;
     }
     if (skipStep) {
@@ -68,7 +71,7 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
       filterX: position.current + padding,
       config: { duration: 1000 },
     });
-  }, [idx, currentInSec, status, dragging, skipStep, pause, api, oxSec]);
+  }, [dispatch, currentInSec, status, dragging, skipStep, api, oxSec]);
 
   // useEffect(() => {
   //   if (dragging || position.current > maxTrack) {
@@ -109,11 +112,20 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
         // TODO: return the drag -> bounds
       });
     },
-    onDragEnd: ({ movement: [ox] }) => {
+    onDragEnd: async ({ movement: [ox] }) => {
       position.current += ox;
       setSkipStep(true);
-      // seek(Math.round(position.current / oxSec));
-      play(idx, Math.round(position.current / oxSec));
+      // if (isFulfilled(dispatch(seek(Math.round(position.current / oxSec))))) {
+      //   console.log("!!! seek -> fullfilled");
+      //   dispatch(play(id));
+      // }
+      await dispatch(
+        seek({
+          trackId: id,
+          currentInSec: Math.round(position.current / oxSec),
+        })
+      );
+      dispatch(play(id));
     },
     onHover: ({ hovering }) => {
       setHoverTrCtrl(() => hovering ?? false);
@@ -129,7 +141,7 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
       fill="none"
     >
       <defs>
-        <filter id={`glow${idx}`}>
+        <filter id={`glow${id}`}>
           <AnimatedFeFlood
             floodColor="#c0c0c0"
             floodOpacity="1"
@@ -145,7 +157,7 @@ const SoundTrack = ({ idx, duration, waveform }: SoundTrackProps) => {
         </filter>
       </defs>
       <path
-        filter={`url(#glow${idx})`}
+        filter={`url(#glow${id})`}
         fillRule="evenodd"
         clipRule="evenodd"
         d={`${path}`}

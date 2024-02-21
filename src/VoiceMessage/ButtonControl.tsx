@@ -1,16 +1,20 @@
-import { useTrack, useAudioPlayerControl } from "./state";
-import { SoundTrack } from "./state/Provider";
+import { useTrack, useAppDispatch } from "../hooks";
+import { play, pause } from "../store/actions";
+import { SoundTrack } from "../store/model";
 
 interface ButtonControlProps {
-  idx: SoundTrack["idx"];
+  trackId: SoundTrack["id"];
 }
-const ButtonControl = ({ idx }: ButtonControlProps) => {
-  const { status } = useTrack(idx);
-  const { play, pause } = useAudioPlayerControl();
+const ButtonControl = ({ trackId }: ButtonControlProps) => {
+  const dispatch = useAppDispatch();
+  const { status } = useTrack(trackId);
+
   function toggle() {
-    console.log("!!! status", status);
-    if (status === "stopped" || status === "paused") play(idx);
-    else if (status === "playing") pause();
+    if (status === "stopped" || status === "paused") {
+      dispatch(play(trackId));
+    } else if (status === "playing") {
+      dispatch(pause());
+    }
   }
 
   return (
