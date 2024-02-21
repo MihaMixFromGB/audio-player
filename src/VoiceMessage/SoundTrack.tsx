@@ -1,5 +1,4 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { isFulfilled } from "@reduxjs/toolkit";
 import { useSpring, animated } from "@react-spring/web";
 import { useGesture } from "@use-gesture/react";
 
@@ -115,10 +114,7 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
     onDragEnd: async ({ movement: [ox] }) => {
       position.current += ox;
       setSkipStep(true);
-      // if (isFulfilled(dispatch(seek(Math.round(position.current / oxSec))))) {
-      //   console.log("!!! seek -> fullfilled");
-      //   dispatch(play(id));
-      // }
+
       await dispatch(
         seek({
           trackId: id,

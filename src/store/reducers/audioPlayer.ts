@@ -19,7 +19,6 @@ export class AudioPlayer {
 
     this._sound = new Howl({ src: track.src });
 
-    console.log("!!! settTrack", track);
     if (this.track.currentInSec) {
       this._sound.seek(this.track.currentInSec);
     }
@@ -49,7 +48,6 @@ export class AudioPlayer {
         this._resetTimer();
         cb({
           id: this.track!.id,
-          // currentInSec: Math.round(sound.seek() ?? 0),
           status: "stopped",
         });
       });

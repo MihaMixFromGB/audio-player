@@ -26,7 +26,7 @@ const playList = playListSrc.map<SoundTrack>((src, idx) => ({
   src,
   currentInSec: 0,
   status: "stopped",
-  duration: 72,
+  duration: 29,
   waveform: [
     0, 0, 0, 0, 0, 1, 31, 31, 31, 31, 30, 26, 31, 31, 31, 31, 31, 27, 11, 17,
     17, 16, 12, 9, 2, 0, 0, 0, 0, 3, 12, 12, 12, 12, 11, 10, 3, 0, 0, 4, 9, 10,
@@ -78,7 +78,6 @@ export const seek = createAsyncThunk<
     }
 
     const newCurrentInSec = await player.seek(currentInSec);
-    console.log("!!! seek -> newCurrentInSec", newCurrentInSec);
     return { id: trackId, currentInSec: newCurrentInSec };
   }
 );
