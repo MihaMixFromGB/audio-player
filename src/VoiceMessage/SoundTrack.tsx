@@ -5,6 +5,7 @@ import { useGesture } from "@use-gesture/react";
 import { useAppDispatch, useTrack } from "../hooks";
 import { play, seek, pause } from "../store/actions";
 import { SoundTrack as TSoundTrack } from "../store/model";
+import TimeBar from "./TimeBar";
 
 export interface SoundTrackProps {
   trackId: TSoundTrack["id"];
@@ -40,6 +41,7 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
   // const timer = useRef<number | undefined>();
 
   position.current = currentInSec * oxSec;
+  const [positionInSec, setPositionInSec] = useState(currentInSec);
 
   const [hoverTrCtrl, setHoverTrCtrl] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -47,14 +49,20 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
 
   const [{ x, filterX }, api] = useSpring(() => ({ x: 0, filterX: padding }));
 
-  function getX(value: number) {
-    if (value < 0) return 0;
-    if (value > maxTrack) return maxTrack;
-    return value;
+  function getX(position: number) {
+    if (position < 0) return 0;
+    if (position > maxTrack) return maxTrack;
+    return position;
+  }
+
+  function getPositionInSec(position: number) {
+    const newCurrentInSec = Math.round(position / oxSec);
+    if (newCurrentInSec < 0) return 0;
+    else if (newCurrentInSec > duration) return duration;
+    return newCurrentInSec;
   }
 
   useEffect(() => {
-    // console.log(`!!! useEffect -> idx: ${idx}`);
     if (dragging) {
       dispatch(pause());
       return;
@@ -103,6 +111,11 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
     onDrag: ({ down, dragging, movement: [ox] }) => {
       setDragging(() => dragging ?? false);
       const newPosition = getX(position.current + ox);
+      const newPositonInSec = getPositionInSec(newPosition);
+      if (Math.abs(positionInSec - newPositonInSec) > 0.9) {
+        setPositionInSec(newPositonInSec);
+      }
+
       api.start({
         x: newPosition,
         filterX: newPosition + padding,
@@ -118,7 +131,7 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
       await dispatch(
         seek({
           trackId: id,
-          currentInSec: Math.round(position.current / oxSec),
+          currentInSec: getPositionInSec(position.current),
         })
       );
       dispatch(play(id));
@@ -130,56 +143,62 @@ const SoundTrack = ({ trackId }: SoundTrackProps) => {
 
   const AnimatedFeFlood = animated("feFlood");
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={`${width}px`}
-      viewBox={`0 ${maxHeight / 2} ${width} ${maxHeight}`}
-      fill="none"
-    >
-      <defs>
-        <filter id={`glow${id}`}>
-          <AnimatedFeFlood
-            floodColor="#c0c0c0"
-            floodOpacity="1"
-            x={filterX}
-            y={maxHeight / 2}
+    <div className="voice-message__soundtrack">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width={`${width}px`}
+        viewBox={`0 ${maxHeight / 2} ${width} ${maxHeight}`}
+        fill="none"
+      >
+        <defs>
+          <filter id={`glow${id}`}>
+            <AnimatedFeFlood
+              floodColor="#c0c0c0"
+              floodOpacity="1"
+              x={filterX}
+              y={maxHeight / 2}
+              height={maxHeight}
+              width={maxTrack + padding}
+              result="A"
+            />
+            <feComposite operator="in" in2="SourceGraphic" in="A" result="B" />
+            <feColorMatrix type="hueRotate" in="B" result="C" values="90" />
+            <feComposite operator="over" in2="SourceGraphic" in="C" />
+          </filter>
+        </defs>
+        <path
+          filter={`url(#glow${id})`}
+          fillRule="evenodd"
+          clipRule="evenodd"
+          d={`${path}`}
+          stroke="#4eac6d"
+        ></path>
+        <animated.g {...bind()} style={{ x, touchAction: "none" }}>
+          <rect
+            width="20"
             height={maxHeight}
-            width={maxTrack + padding}
-            result="A"
+            y={maxHeight / 2}
+            stroke="none"
+            fill="#fff"
+            fillOpacity="0"
+          ></rect>
+          <line
+            id="trCtrl"
+            y2={(maxHeight * 3) / 2}
+            x2={padding}
+            y1={maxHeight / 2}
+            x1={padding}
+            stroke="#000"
+            strokeWidth={hoverTrCtrl ? hoverBorder : 3}
+            fill="none"
           />
-          <feComposite operator="in" in2="SourceGraphic" in="A" result="B" />
-          <feColorMatrix type="hueRotate" in="B" result="C" values="90" />
-          <feComposite operator="over" in2="SourceGraphic" in="C" />
-        </filter>
-      </defs>
-      <path
-        filter={`url(#glow${id})`}
-        fillRule="evenodd"
-        clipRule="evenodd"
-        d={`${path}`}
-        stroke="#4eac6d"
-      ></path>
-      <animated.g {...bind()} style={{ x, touchAction: "none" }}>
-        <rect
-          width="20"
-          height={maxHeight}
-          y={maxHeight / 2}
-          stroke="none"
-          fill="#fff"
-          fillOpacity="0"
-        ></rect>
-        <line
-          id="trCtrl"
-          y2={(maxHeight * 3) / 2}
-          x2={padding}
-          y1={maxHeight / 2}
-          x1={padding}
-          stroke="#000"
-          strokeWidth={hoverTrCtrl ? hoverBorder : 3}
-          fill="none"
-        />
-      </animated.g>
-    </svg>
+        </animated.g>
+      </svg>
+      <TimeBar
+        currentInSec={dragging ? positionInSec : currentInSec}
+        duration={duration}
+      />
+    </div>
   );
 };
 

@@ -1,12 +1,8 @@
-import { useTrack } from "../hooks";
-import { SoundTrack } from "../store/model";
-
 interface TimeBarProps {
-  trackId: SoundTrack["id"];
+  currentInSec: number;
+  duration: number;
 }
-const TimeBar = ({ trackId }: TimeBarProps) => {
-  const { currentInSec, duration } = useTrack(trackId);
-
+const TimeBar = ({ currentInSec, duration }: TimeBarProps) => {
   return (
     <div className="voice-message__time">
       <p>{formatTime(currentInSec)}</p>
