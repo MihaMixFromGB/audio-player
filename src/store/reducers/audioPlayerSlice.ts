@@ -72,7 +72,7 @@ export const seek = createAsyncThunk<
 >(
   "audioPlayer/seek",
   async ({ trackId, currentInSec }, { getState, dispatch }) => {
-    if (player.track && player.track.id !== trackId) {
+    if (!player.track || (player.track && player.track.id !== trackId)) {
       const track = getState().audioPlayer.entities[trackId];
       await setTrack({ track, dispatch });
     }
